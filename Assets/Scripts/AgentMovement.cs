@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using DatastrikeNetwork;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -21,9 +22,12 @@ public class AgentMovement : MonoBehaviour
     private CharacterController charController;
     private GameObject cmra;
     private GameObject originalCameraPosition;
+    private NetworkIdentity netId;
 
     private void Start()
     {
+        netId = GetComponent<NetworkIdentity>();
+
         charController = GetComponent<CharacterController>();
         cmra = cameraRig.transform.GetChild(0).gameObject;
         originalCameraPosition = cameraRig.transform.GetChild(1).gameObject;
@@ -34,9 +38,32 @@ public class AgentMovement : MonoBehaviour
 
     private void Update()
     {
-        Movement();
-        CameraMovement();
-        Shooting();
+        if (netId.localPlayerOwns)
+        {
+            Movement();
+            CameraMovement();
+            Shooting();
+            if (NetworkClock.IsTimeToSend())
+            {
+                netId.SendDataOverNetwork(NetworkEventType.UpdatePosition, NetworkSubeventType.Null, transform);
+            }
+        }
+
+        else
+        {
+            while (netId.dataQueue.Count != 0)
+            {
+                NetworkEvent currentData = netId.dataQueue[0];
+                netId.dataQueue.RemoveAt(0);
+                if (currentData.GetNetworkEventType() == NetworkEventType.UpdatePosition)
+                {
+                    Vector3[] newTrans = (Vector3[])currentData.GetData();
+                    transform.position = newTrans[0];
+                    transform.eulerAngles = newTrans[1];
+                    transform.localScale = newTrans[2];
+                }
+            }
+        }
     }
 
     private void Movement()
@@ -58,9 +85,9 @@ public class AgentMovement : MonoBehaviour
             movement.y = jumpProgress;
         }
 
-        movement = cameraRig.transform.TransformDirection(movement);
+        movement = cameraRig.transform.TransformDirection(movement) * Time.deltaTime - (Vector3.up * 0.01f);
 
-        charController.Move(movement * Time.deltaTime - (Vector3.up * 0.01f));
+        charController.Move(movement);
     }
 
     private void CameraMovement()

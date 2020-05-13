@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using DatastrikeNetwork;
 
 public class HackerMovement : MonoBehaviour
 {
@@ -13,20 +14,45 @@ public class HackerMovement : MonoBehaviour
     private CharacterController charController = null;
     private GameObject cmra;
     private GameObject originalCameraPosition;
+    private NetworkIdentity netId;
 
     private void Start()
     {
         charController = GetComponent<CharacterController>();
         cmra = cameraRig.transform.GetChild(0).gameObject;
         originalCameraPosition = cameraRig.transform.GetChild(1).gameObject;
+        netId = GetComponent<NetworkIdentity>();
 
         originalCameraPosition.transform.LookAt(transform);
     }
 
     private void Update()
     {
-        Movement();
-        CameraRotation();
+        if (netId.localPlayerOwns)
+        {
+            Movement();
+            CameraRotation();
+            if (NetworkClock.IsTimeToSend())
+            {
+                netId.SendDataOverNetwork(NetworkEventType.UpdatePosition, NetworkSubeventType.Null, transform);
+            }
+        }
+
+        else
+        {
+            while (netId.dataQueue.Count != 0)
+            {
+                NetworkEvent currentData = netId.dataQueue[0];
+                netId.dataQueue.RemoveAt(0);
+                if (currentData.GetNetworkEventType() == NetworkEventType.UpdatePosition)
+                {
+                    Vector3[] newTrans = (Vector3[])currentData.GetData();
+                    transform.position = newTrans[0];
+                    transform.eulerAngles = newTrans[1];
+                    transform.localScale = newTrans[2];
+                }
+            }
+        }
     }
 
     private void Movement()
@@ -38,9 +64,10 @@ public class HackerMovement : MonoBehaviour
         Vector3 movement = new Vector3(horiz, 0.0f, vert);
 
         movement = transform.TransformDirection(movement);
-        movement = movement + (Vector3.up * altitude); 
+        movement = movement + (Vector3.up * altitude);
+        movement *= Time.deltaTime;
 
-        charController.Move(movement * Time.deltaTime);
+        charController.Move(movement);
     }
 
     private void CameraRotation()
