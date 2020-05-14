@@ -16,6 +16,11 @@ public class HackerMovement : MonoBehaviour
     private GameObject originalCameraPosition;
     private NetworkIdentity netId;
 
+    private Vector3 lastPos;
+    private Vector3 newPos;
+    private float lerpRatio = 1 / (float)NetworkClock.modulus;
+    private float currentLerp = 1 / (float)NetworkClock.modulus;
+
     private void Start()
     {
         charController = GetComponent<CharacterController>();
@@ -24,6 +29,9 @@ public class HackerMovement : MonoBehaviour
         netId = GetComponent<NetworkIdentity>();
 
         originalCameraPosition.transform.LookAt(transform);
+
+        lastPos = transform.position;
+        newPos = transform.position;
     }
 
     private void Update()
@@ -40,6 +48,9 @@ public class HackerMovement : MonoBehaviour
 
         else
         {
+            transform.position = Vector3.Lerp(lastPos, newPos, currentLerp);
+            currentLerp += lerpRatio;
+
             while (netId.dataQueue.Count != 0)
             {
                 NetworkEvent currentData = netId.dataQueue[0];
@@ -47,7 +58,10 @@ public class HackerMovement : MonoBehaviour
                 if (currentData.GetNetworkEventType() == NetworkEventType.UpdatePosition)
                 {
                     Vector3[] newTrans = (Vector3[])currentData.GetData();
-                    transform.position = newTrans[0];
+                    lastPos = new Vector3(newPos.x, newPos.y, newPos.z);
+                    newPos = newTrans[0];
+                    currentLerp = lerpRatio;
+
                     transform.eulerAngles = newTrans[1];
                     transform.localScale = newTrans[2];
                 }

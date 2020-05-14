@@ -6,9 +6,10 @@ using DatastrikeNetwork;
 
 public class NetworkClock : MonoBehaviour
 {
+    public static int modulus = 4;
+
     private static bool communicationTrigger = false;
     private static int time = 1;
-    private static int modulus = 4;
 
     // Runs 50 times a second
     private void FixedUpdate()

@@ -28,6 +28,8 @@ namespace DatastrikeNetwork
             public byte[] recvBuffer = new byte[RECV_BUFFER_SIZE];
         }
 
+        private static bool connectionFound = false;
+
         private static byte[] messageToSend = new byte[SEND_BUFFER_SIZE];
         private static int currentMessageLength = 2;
 
@@ -47,18 +49,24 @@ namespace DatastrikeNetwork
                 listener.Bind(localEndPoint);
                 listener.Listen(5);
 
-                listener.BeginAccept(new AsyncCallback(ServerAcceptCallback), listener);
+                while (!connectionFound)
+                {
+                    listener.BeginAccept(new AsyncCallback(ServerAcceptCallback), listener);
+                    Thread.Sleep(1000);
+                }
             }
 
             catch (Exception e)
             {
-                Console.WriteLine(e.ToString());
+                NetworkIdentity.ConsolePrint(e.ToString());
             }
         }
 
         // When a connection is accepted, initialize state objects then start queuing data for sending (and get ready to receive)
         private static void ServerAcceptCallback(IAsyncResult ar)
         {
+            connectionFound = true;
+
             Socket listener = (Socket)ar.AsyncState;
             Socket handler = listener.EndAccept(ar);
 
@@ -137,7 +145,7 @@ namespace DatastrikeNetwork
 
             catch (Exception e)
             {
-                Console.WriteLine(e.ToString());
+                NetworkIdentity.ConsolePrint(e.ToString());
             }
         }
 
