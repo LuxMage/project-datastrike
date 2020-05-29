@@ -25,7 +25,9 @@ public class AgentMovement : MonoBehaviour
     private NetworkIdentity netId;
 
     private Vector3 lastPos;
+    private Vector3 lastRot;
     private Vector3 newPos;
+    private Vector3 newRot;
     private float lerpRatio = 1 / (float)NetworkClock.modulus;
     private float currentLerp = 1 / (float)NetworkClock.modulus;
 
@@ -41,7 +43,9 @@ public class AgentMovement : MonoBehaviour
         originalCameraPosition.transform.LookAt(transform);
 
         lastPos = transform.position;
+        lastRot = transform.eulerAngles;
         newPos = transform.position;
+        newRot = transform.eulerAngles;
     }
 
     private void Update()
@@ -60,6 +64,7 @@ public class AgentMovement : MonoBehaviour
         else
         {
             transform.position = Vector3.Lerp(lastPos, newPos, currentLerp);
+            transform.eulerAngles = Vector3.Lerp(lastRot, newRot, currentLerp);
             currentLerp += lerpRatio;
 
             while (netId.dataQueue.Count != 0)
@@ -70,10 +75,11 @@ public class AgentMovement : MonoBehaviour
                 {
                     Vector3[] newTrans = (Vector3[])currentData.GetData();
                     lastPos = new Vector3(newPos.x, newPos.y, newPos.z);
+                    lastRot = new Vector3(newRot.x, newRot.y, newRot.z);
                     newPos = newTrans[0];
+                    newRot = newTrans[1];
                     currentLerp = lerpRatio;
 
-                    transform.eulerAngles = newTrans[1];
                     transform.localScale = newTrans[2];
                 }
             }

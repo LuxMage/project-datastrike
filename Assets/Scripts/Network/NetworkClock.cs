@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Threading;
 using DatastrikeNetwork;
+using Open.Nat;
 
 public class NetworkClock : MonoBehaviour
 {
@@ -26,6 +27,11 @@ public class NetworkClock : MonoBehaviour
                 r.Start();
             }
         }
+    }
+
+    private void OnApplicationQuit()
+    {
+        NetworkCommunicator.appQuit = true;
     }
 
     private static void SendData()

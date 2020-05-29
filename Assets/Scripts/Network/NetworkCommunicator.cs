@@ -8,6 +8,9 @@ using System.Text;
 using System.Threading;
 using UnityEngine;
 using UnityEngine.Networking.Types;
+using Open.Nat;
+using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace DatastrikeNetwork
 {
@@ -28,6 +31,8 @@ namespace DatastrikeNetwork
             public byte[] recvBuffer = new byte[RECV_BUFFER_SIZE];
         }
 
+        public static bool appQuit = false;
+
         private static bool connectionFound = false;
 
         private static byte[] messageToSend = new byte[SEND_BUFFER_SIZE];
@@ -37,22 +42,50 @@ namespace DatastrikeNetwork
         private static RecvState recvState = null;
 
         // Initializes server, listens for a client connection.
-        public static void RunServer()
+        public static async void RunServer()
         {
-            IPAddress ip = IPAddress.Parse("127.0.0.1");
-            IPEndPoint localEndPoint = new IPEndPoint(ip, 27317);
+            NatDiscoverer discoverer = new NatDiscoverer();
 
-            Socket listener = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            NatDiscoverer.TraceSource.Switch.Level = SourceLevels.Information;
+            NatDiscoverer.TraceSource.Listeners.Add(new TextWriterTraceListener("OpenNatTraceOutput.txt", "OpenNatTrace"));
+
+            NatDevice device = await discoverer.DiscoverDeviceAsync();
+
+            await device.CreatePortMapAsync(new Mapping(Protocol.Tcp, 27317, 27317, "Datastrike Host"));
+
+            /*foreach (Mapping mapping in await device.GetAllMappingsAsync())
+            {
+                NetworkIdentity.ConsolePrint(mapping.ToString());
+            }*/
+
+            IPEndPoint localEndPoint = new IPEndPoint(IPAddress.Any, 27317);
+
+            Socket listener = new Socket(localEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
 
             try
             {
                 listener.Bind(localEndPoint);
                 listener.Listen(5);
 
-                while (!connectionFound)
+                while (!connectionFound && !appQuit)
                 {
                     listener.BeginAccept(new AsyncCallback(ServerAcceptCallback), listener);
+                    NetworkIdentity.ConsolePrint("Hi7");
                     Thread.Sleep(1000);
+                }
+
+                if (appQuit)
+                {
+                    NatDiscoverer.TraceSource.Flush();
+                    NatDiscoverer.TraceSource.Close();
+
+                    foreach (Mapping mapping in await device.GetAllMappingsAsync())
+                    {
+                        if (mapping.Description == "Datastrike Host" || mapping.Description == "Datastrike Client")
+                        {
+                            await device.DeletePortMapAsync(mapping);
+                        }
+                    }
                 }
             }
 
@@ -65,6 +98,7 @@ namespace DatastrikeNetwork
         // When a connection is accepted, initialize state objects then start queuing data for sending (and get ready to receive)
         private static void ServerAcceptCallback(IAsyncResult ar)
         {
+            NetworkIdentity.ConsolePrint("Server made it here.");
             connectionFound = true;
 
             Socket listener = (Socket)ar.AsyncState;
@@ -131,16 +165,30 @@ namespace DatastrikeNetwork
         }
 
         // Initializes client and attempts to connect to a listening server.
-        public static void RunClient()
+        public static async void RunClient()
         {
             try
             {
-                IPAddress ip = IPAddress.Parse("127.0.0.1");
-                IPEndPoint remoteEndPoint = new IPEndPoint(ip, 27317);
+                NatDiscoverer discoverer = new NatDiscoverer();
+                NatDevice device = await discoverer.DiscoverDeviceAsync();
 
-                Socket client = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                await device.CreatePortMapAsync(new Mapping(Protocol.Tcp, 27327, 27327, "Datastrike Client"));
+
+                /*foreach (Mapping mapping in await device.GetAllMappingsAsync())
+                {
+                    NetworkIdentity.ConsolePrint(mapping.ToString());
+                }*/
+
+                IPEndPoint remoteEndPoint = new IPEndPoint(IPAddress.Parse("<insert actual ip here>"), 27317);
+
+                Socket client = new Socket(remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
 
                 client.BeginConnect(remoteEndPoint, new AsyncCallback(ClientConnectCallback), client);
+            }
+
+            catch (MappingException me)
+            {
+                NetworkIdentity.ConsolePrint(me.ErrorCode.ToString());
             }
 
             catch (Exception e)
@@ -152,8 +200,10 @@ namespace DatastrikeNetwork
         // Equivalent to ServerAcceptCallback
         private static void ClientConnectCallback(IAsyncResult ar)
         {
+            NetworkIdentity.ConsolePrint("Client Made it here.");
             Socket client = (Socket)ar.AsyncState;
             client.EndConnect(ar);
+            NetworkIdentity.ConsolePrint("Client Made it here2.");
 
             SendState ss = new SendState();
             ss.workSocket = client;
