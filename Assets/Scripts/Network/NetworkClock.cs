@@ -29,11 +29,6 @@ public class NetworkClock : MonoBehaviour
         }
     }
 
-    private void OnApplicationQuit()
-    {
-        NetworkCommunicator.appQuit = true;
-    }
-
     private static void SendData()
     {
         NetworkCommunicator.SendDataBuffer();

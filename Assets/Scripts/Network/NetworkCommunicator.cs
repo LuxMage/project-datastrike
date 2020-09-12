@@ -8,220 +8,209 @@ using System.Text;
 using System.Threading;
 using UnityEngine;
 using UnityEngine.Networking.Types;
-using Open.Nat;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
+using UnityEditorInternal;
+using System.Linq;
 
 namespace DatastrikeNetwork
 {
     public class NetworkCommunicator
     {
-        public const int SEND_BUFFER_SIZE = 2048;
-        public const int RECV_BUFFER_SIZE = 2048;
 
-        public class SendState
+        private class UdpState
         {
-            public Socket workSocket = null;
-            public byte[] sendBuffer = new byte[SEND_BUFFER_SIZE];
+            public UdpClient u;
+            public IPEndPoint e;
         }
 
-        public class RecvState
+        // UdpClient and Relay data
+        private static IPEndPoint localEndPoint = null;
+        private static IPEndPoint relayEndPoint = null;
+        private static UdpClient udpClient = null;
+
+        // Relay initialization variables
+        private static bool initMessageSent = false;
+        private static bool initMessageRecv = false;
+        private static byte[] initMessage = null;
+
+        private static List<byte> mts = new List<byte>();
+        private static byte[] mrcv = null;
+
+        private static int sendSeq = 0;
+        private static int recvSeq = 0;
+
+        public static void RunHost()
         {
-            public Socket workSocket = null;
-            public byte[] recvBuffer = new byte[RECV_BUFFER_SIZE];
+            InitializeServerConnection();
+
+            // Initialization successful, start communication
+            NetworkClock.StartCommunication();
         }
 
-        public static bool appQuit = false;
-
-        private static bool connectionFound = false;
-
-        private static byte[] messageToSend = new byte[SEND_BUFFER_SIZE];
-        private static int currentMessageLength = 2;
-
-        private static SendState sendState = null;
-        private static RecvState recvState = null;
-
-        // Initializes server, listens for a client connection.
-        public static async void RunServer()
+        public static void RunClient()
         {
-            NatDiscoverer discoverer = new NatDiscoverer();
-
-            NatDiscoverer.TraceSource.Switch.Level = SourceLevels.Information;
-            NatDiscoverer.TraceSource.Listeners.Add(new TextWriterTraceListener("OpenNatTraceOutput.txt", "OpenNatTrace"));
-
-            NatDevice device = await discoverer.DiscoverDeviceAsync();
-
-            await device.CreatePortMapAsync(new Mapping(Protocol.Tcp, 27317, 27317, "Datastrike Host"));
-
-            /*foreach (Mapping mapping in await device.GetAllMappingsAsync())
-            {
-                NetworkIdentity.ConsolePrint(mapping.ToString());
-            }*/
-
-            IPEndPoint localEndPoint = new IPEndPoint(IPAddress.Any, 27317);
-
-            Socket listener = new Socket(localEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-
-            try
-            {
-                listener.Bind(localEndPoint);
-                listener.Listen(5);
-
-                while (!connectionFound && !appQuit)
-                {
-                    listener.BeginAccept(new AsyncCallback(ServerAcceptCallback), listener);
-                    NetworkIdentity.ConsolePrint("Hi7");
-                    Thread.Sleep(1000);
-                }
-
-                if (appQuit)
-                {
-                    NatDiscoverer.TraceSource.Flush();
-                    NatDiscoverer.TraceSource.Close();
-
-                    foreach (Mapping mapping in await device.GetAllMappingsAsync())
-                    {
-                        if (mapping.Description == "Datastrike Host" || mapping.Description == "Datastrike Client")
-                        {
-                            await device.DeletePortMapAsync(mapping);
-                        }
-                    }
-                }
-            }
-
-            catch (Exception e)
-            {
-                NetworkIdentity.ConsolePrint(e.ToString());
-            }
-        }
-
-        // When a connection is accepted, initialize state objects then start queuing data for sending (and get ready to receive)
-        private static void ServerAcceptCallback(IAsyncResult ar)
-        {
-            NetworkIdentity.ConsolePrint("Server made it here.");
-            connectionFound = true;
-
-            Socket listener = (Socket)ar.AsyncState;
-            Socket handler = listener.EndAccept(ar);
-
-            SendState ss = new SendState();
-            ss.workSocket = handler;
-            sendState = ss;
-
-            RecvState rs = new RecvState();
-            rs.workSocket = handler;
-            recvState = rs;
+            InitializeServerConnection();
 
             NetworkClock.StartCommunication();
         }
 
-        // Called by NetworkClock to cause the current data in messageToSend to be sent.
+        private static void InitializeServerConnection()
+        {
+            // Get local IP address
+            var host = Dns.GetHostEntry(Dns.GetHostName());
+            IPAddress localIP = IPAddress.Parse("0.0.0.0");
+
+            foreach (var ip in host.AddressList)
+            {
+                if (ip.AddressFamily == AddressFamily.InterNetwork)
+                {
+                    localIP = ip;
+                }
+            }
+
+            // Initialize endpoints and UdpClient object
+            localEndPoint = new IPEndPoint(localIP, 27317);
+            relayEndPoint = new IPEndPoint(IPAddress.Parse(""), 27317); // Insert server IP address here
+
+            udpClient = new UdpClient(localEndPoint);
+
+            // Set default host for udpClient
+            try
+            {
+                udpClient.Connect(relayEndPoint);
+            }
+
+            catch (Exception e)
+            {
+                NetworkClock.ConsolePrint(e.ToString());
+            }
+
+            while (true)
+            {
+                // Send relay connect message
+                UdpState initState = new UdpState();
+                initState.u = udpClient;
+                initState.e = relayEndPoint;
+                byte[] synMessage = new byte[] { 1 };
+
+                udpClient.BeginSend(synMessage, synMessage.Length, new AsyncCallback(HostInitSendCallback), initState);
+
+                while (!initMessageSent)
+                {
+                    Thread.Sleep(100);
+                }
+
+                // Wait until we receive the all-clear from the relay server to continue
+                udpClient.BeginReceive(new AsyncCallback(HostInitRecvCallback), initState);
+                NetworkClock.ConsolePrint("Waiting on other client...");
+
+                while (!initMessageRecv)
+                {
+                    Thread.Sleep(100);
+                }
+
+                if (initMessage[0] != 3)
+                {
+                    NetworkClock.ConsolePrint("Unsuccessful initialization, trying again...");
+                    continue;
+                }
+
+                break;
+            }
+        }
+
         public static void SendDataBuffer()
         {
-            messageToSend[currentMessageLength] = 255;
-            messageToSend[currentMessageLength + 1] = 255;
-            messageToSend[currentMessageLength + 2] = 255;
-            currentMessageLength += 3;
-            sendState.sendBuffer = messageToSend;
-            sendState.workSocket.BeginSend(sendState.sendBuffer, 0, currentMessageLength, 0, new AsyncCallback(SendCallback), sendState.workSocket);
+            // Calculate checksum (sum of binary complements)
+            int checksum = 0;
+
+            foreach (byte b in mts)
+            {
+                int complement = (~b) & 255;
+                checksum += complement;
+            }
+
+            // Assemble full message with sequence number, checksum, and content length
+            List<byte> fm = new List<byte>();
+            fm.AddRange(BitConverter.GetBytes(sendSeq));
+            fm.AddRange(BitConverter.GetBytes(checksum));
+            fm.AddRange(BitConverter.GetBytes(mts.Count));
+
+            mts.InsertRange(0, fm);
+
+            byte[] fullMessage = mts.ToArray();
+
+            UdpState state = new UdpState();
+            state.u = udpClient;
+            state.e = relayEndPoint;
+
+            udpClient.BeginSend(fullMessage, fullMessage.Length, new AsyncCallback(SendCallback), state);
+            sendSeq++;
         }
 
-        // After data is sent, empty messageToSend.
-        private static void SendCallback(IAsyncResult ar)
-        {
-            Socket handler = (Socket)ar.AsyncState;
-            handler.EndSend(ar);
-            messageToSend = new byte[SEND_BUFFER_SIZE];
-            BitConverter.GetBytes((ushort)2).CopyTo(messageToSend, 0);
-            currentMessageLength = 2;
-        }
-
-        // Triggered by NetworkClock to start receiving data
         public static void RecvDataBuffer()
         {
-            recvState.workSocket.BeginReceive(recvState.recvBuffer, 0, RECV_BUFFER_SIZE, 0, new AsyncCallback(ReceiveCallback), recvState);
+            UdpState state = new UdpState();
+            state.u = udpClient;
+            state.e = relayEndPoint;
+
+            udpClient.BeginReceive(new AsyncCallback(RecvCallback), state);
         }
 
-        // Check if message is valid. If so, distribute messages to their appropriate network identities. Else, get the rest if the message.
-        private static void ReceiveCallback(IAsyncResult ar)
-        {
-            RecvState state = (RecvState)ar.AsyncState;
-
-            int bytesRead = state.workSocket.EndReceive(ar);
-            ushort messageLength = BitConverter.ToUInt16(state.recvBuffer, 0);
-
-            bool hasTerminator = state.recvBuffer[messageLength] == 255 && state.recvBuffer[messageLength + 1] == 255 && state.recvBuffer[messageLength + 2] == 255;
-
-            if (bytesRead > 2 && hasTerminator)
-            {
-                NetworkSerializer.DistributeMessages(state.recvBuffer);
-                state.recvBuffer = new byte[RECV_BUFFER_SIZE];
-            }
-
-            else
-            {
-                state.workSocket.BeginReceive(state.recvBuffer, 0, RECV_BUFFER_SIZE, 0, new AsyncCallback(ReceiveCallback), state);
-            }
-        }
-
-        // Initializes client and attempts to connect to a listening server.
-        public static async void RunClient()
-        {
-            try
-            {
-                NatDiscoverer discoverer = new NatDiscoverer();
-                NatDevice device = await discoverer.DiscoverDeviceAsync();
-
-                await device.CreatePortMapAsync(new Mapping(Protocol.Tcp, 27327, 27327, "Datastrike Client"));
-
-                /*foreach (Mapping mapping in await device.GetAllMappingsAsync())
-                {
-                    NetworkIdentity.ConsolePrint(mapping.ToString());
-                }*/
-
-                IPEndPoint remoteEndPoint = new IPEndPoint(IPAddress.Parse("<insert actual ip here>"), 27317);
-
-                Socket client = new Socket(remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-
-                client.BeginConnect(remoteEndPoint, new AsyncCallback(ClientConnectCallback), client);
-            }
-
-            catch (MappingException me)
-            {
-                NetworkIdentity.ConsolePrint(me.ErrorCode.ToString());
-            }
-
-            catch (Exception e)
-            {
-                NetworkIdentity.ConsolePrint(e.ToString());
-            }
-        }
-
-        // Equivalent to ServerAcceptCallback
-        private static void ClientConnectCallback(IAsyncResult ar)
-        {
-            NetworkIdentity.ConsolePrint("Client Made it here.");
-            Socket client = (Socket)ar.AsyncState;
-            client.EndConnect(ar);
-            NetworkIdentity.ConsolePrint("Client Made it here2.");
-
-            SendState ss = new SendState();
-            ss.workSocket = client;
-            sendState = ss;
-
-            RecvState rs = new RecvState();
-            rs.workSocket = client;
-            recvState = rs;
-
-            NetworkClock.StartCommunication();
-        }
-
-        // Adds a new data entry to messageToSend.
         public static void UpdateSendMessage(byte[] message)
         {
-            message.CopyTo(messageToSend, currentMessageLength);
-            currentMessageLength += message.Length;
-            BitConverter.GetBytes((ushort)currentMessageLength).CopyTo(messageToSend, 0);
+            mts.AddRange(message);
+        }
+
+        private static void HostInitSendCallback(IAsyncResult ar)
+        {
+            UdpClient u = ((UdpState)ar.AsyncState).u;
+            u.EndSend(ar);
+            initMessageSent = true;
+        }
+
+        private static void HostInitRecvCallback(IAsyncResult ar)
+        {
+            UdpState state = (UdpState)ar.AsyncState;
+            initMessage = state.u.EndReceive(ar, ref state.e);
+            initMessageRecv = true;
+        }
+
+        private static void SendCallback(IAsyncResult ar)
+        {
+            UdpClient udpClient = ((UdpState)ar.AsyncState).u;
+            udpClient.EndSend(ar);
+        }
+
+        private static void RecvCallback(IAsyncResult ar)
+        {
+            UdpState state = (UdpState)ar.AsyncState;
+            mrcv = state.u.EndReceive(ar, ref state.e);
+
+            // Check the sequence number
+            int supposedSeq = BitConverter.ToInt32(mrcv, 0);
+
+            if (supposedSeq < recvSeq)
+                return;
+
+            recvSeq = supposedSeq;
+
+            int supposedChecksum = BitConverter.ToInt32(mrcv, 4);
+            int calculatedChecksum = 0;
+            int length = BitConverter.ToInt32(mrcv, 8);
+
+            for (int i = 12; i < mrcv.Length; i++)
+            {
+                int complement = (~mrcv[i]) & 255;
+                calculatedChecksum += complement;
+            }
+
+            if (calculatedChecksum != supposedChecksum)
+                return;
+
+            NetworkSerializer.DistributeMessages(mrcv);
         }
     }
 }

@@ -18,3 +18,66 @@ Open.NAT Information: 0 : 10.0.0.1:49152: Found upnp service at: /upnp/control/W
 Open.NAT Information: 0 : 10.0.0.1:49152: Handshake Complete
 Open.NAT Information: 0 : Stop Discovery
 Open.NAT Information: 0 : CreatePortMapAsync - Creating port mapping Tcp 27317 --> 10.0.0.111:27317 (Datastrike Host)
+Open.NAT Information: 0 : Start Discovery
+Open.NAT Information: 0 : Searching for: UpnpSearcher
+Open.NAT Information: 0 : Searching for: PmpSearcher
+Open.NAT Error: 0 : Error searching PmpSearcher - Details:
+Open.NAT Error: 0 : System.Net.Sockets.SocketException (0x80004005): Network is unreachable
+  at System.Net.Sockets.Socket.SendTo (System.Byte[] buffer, System.Int32 offset, System.Int32 size, System.Net.Sockets.SocketFlags socketFlags, System.Net.EndPoint remoteEP) [0x00082] in <84a6f92a7818440db25762d40b5eb9dd>:0 
+  at System.Net.Sockets.UdpClient.Send (System.Byte[] dgram, System.Int32 bytes, System.Net.IPEndPoint endPoint) [0x00067] in <84a6f92a7818440db25762d40b5eb9dd>:0 
+  at Open.Nat.PmpSearcher.Discover (System.Net.Sockets.UdpClient client, System.Threading.CancellationToken cancelationToken) [0x0008a] in <6d4a9fe16377494cb7ae3b94f6677780>:0 
+  at Open.Nat.Searcher.Discover (System.Threading.CancellationToken cancelationToken) [0x00029] in <6d4a9fe16377494cb7ae3b94f6677780>:0 
+Open.NAT Information: 0 : UPnP Response: Router advertised a 'urn:schemas-upnp-org:service:WANIPConnection:1' service!!!
+Open.NAT Information: 0 : Found device at: http://10.0.0.1:49152/IGDdevicedesc_brlan0.xml
+Open.NAT Information: 0 : 10.0.0.1:49152: Fetching service list
+Open.NAT Information: 0 : Found device at: http://10.0.0.1:49152/IGDdevicedesc_brlan0.xml
+Open.NAT Information: 0 : 10.0.0.1:49152: Parsed services list
+Open.NAT Information: 0 : 10.0.0.1:49152: Found service: urn:schemas-upnp-org:service:WANIPConnection:1
+Open.NAT Information: 0 : 10.0.0.1:49152: Found upnp service at: /upnp/control/WANIPConnection0
+Open.NAT Information: 0 : 10.0.0.1:49152: Handshake Complete
+Open.NAT Information: 0 : Stop Discovery
+Open.NAT Information: 0 : CreatePortMapAsync - Creating port mapping Tcp 27317 --> 10.0.0.111:27317 (Datastrike Host)
+Open.NAT Information: 0 : Start Discovery
+Open.NAT Information: 0 : Searching for: UpnpSearcher
+Open.NAT Information: 0 : Searching for: PmpSearcher
+Open.NAT Error: 0 : Error searching PmpSearcher - Details:
+Open.NAT Error: 0 : System.Net.Sockets.SocketException (0x80004005): Network is unreachable
+  at System.Net.Sockets.Socket.SendTo (System.Byte[] buffer, System.Int32 offset, System.Int32 size, System.Net.Sockets.SocketFlags socketFlags, System.Net.EndPoint remoteEP) [0x00082] in <84a6f92a7818440db25762d40b5eb9dd>:0 
+  at System.Net.Sockets.UdpClient.Send (System.Byte[] dgram, System.Int32 bytes, System.Net.IPEndPoint endPoint) [0x00067] in <84a6f92a7818440db25762d40b5eb9dd>:0 
+  at Open.Nat.PmpSearcher.Discover (System.Net.Sockets.UdpClient client, System.Threading.CancellationToken cancelationToken) [0x0008a] in <6d4a9fe16377494cb7ae3b94f6677780>:0 
+  at Open.Nat.Searcher.Discover (System.Threading.CancellationToken cancelationToken) [0x00029] in <6d4a9fe16377494cb7ae3b94f6677780>:0 
+Open.NAT Information: 0 : UPnP Response: Router advertised a 'urn:schemas-upnp-org:service:WANIPConnection:1' service!!!
+Open.NAT Information: 0 : Found device at: http://10.0.0.1:49152/IGDdevicedesc_brlan0.xml
+Open.NAT Information: 0 : 10.0.0.1:49152: Fetching service list
+Open.NAT Information: 0 : Found device at: http://10.0.0.1:49152/IGDdevicedesc_brlan0.xml
+Open.NAT Information: 0 : 10.0.0.1:49152: Parsed services list
+Open.NAT Information: 0 : 10.0.0.1:49152: Found service: urn:schemas-upnp-org:service:WANIPConnection:1
+Open.NAT Information: 0 : 10.0.0.1:49152: Found upnp service at: /upnp/control/WANIPConnection0
+Open.NAT Information: 0 : 10.0.0.1:49152: Handshake Complete
+Open.NAT Information: 0 : Stop Discovery
+Open.NAT Information: 0 : CreatePortMapAsync - Creating port mapping Tcp 27317 --> 10.0.0.111:27317 (Datastrike Host)
+Open.NAT Information: 0 : GetAllMappingsAsync - Getting all mappings
+Open.NAT Warning: 0 : Server failed with error: 713 - SpecifiedArrayIndexInvalid
+Open.NAT Warning: 0 : Router failed with 713-SpecifiedArrayIndexInvalid. No more mappings is assumed.
+Open.NAT Information: 0 : Start Discovery
+Open.NAT Information: 0 : Searching for: UpnpSearcher
+Open.NAT Information: 0 : Searching for: PmpSearcher
+Open.NAT Error: 0 : Error searching PmpSearcher - Details:
+Open.NAT Error: 0 : System.Net.Sockets.SocketException (0x80004005): Network is unreachable
+  at System.Net.Sockets.Socket.SendTo (System.Byte[] buffer, System.Int32 offset, System.Int32 size, System.Net.Sockets.SocketFlags socketFlags, System.Net.EndPoint remoteEP) [0x00082] in <84a6f92a7818440db25762d40b5eb9dd>:0 
+  at System.Net.Sockets.UdpClient.Send (System.Byte[] dgram, System.Int32 bytes, System.Net.IPEndPoint endPoint) [0x00067] in <84a6f92a7818440db25762d40b5eb9dd>:0 
+  at Open.Nat.PmpSearcher.Discover (System.Net.Sockets.UdpClient client, System.Threading.CancellationToken cancelationToken) [0x0008a] in <6d4a9fe16377494cb7ae3b94f6677780>:0 
+  at Open.Nat.Searcher.Discover (System.Threading.CancellationToken cancelationToken) [0x00029] in <6d4a9fe16377494cb7ae3b94f6677780>:0 
+Open.NAT Information: 0 : UPnP Response: Router advertised a 'urn:schemas-upnp-org:service:WANIPConnection:1' service!!!
+Open.NAT Information: 0 : Found device at: http://10.0.0.1:49152/IGDdevicedesc_brlan0.xml
+Open.NAT Information: 0 : 10.0.0.1:49152: Fetching service list
+Open.NAT Information: 0 : Found device at: http://10.0.0.1:49152/IGDdevicedesc_brlan0.xml
+Open.NAT Information: 0 : 10.0.0.1:49152: Parsed services list
+Open.NAT Information: 0 : 10.0.0.1:49152: Found service: urn:schemas-upnp-org:service:WANIPConnection:1
+Open.NAT Information: 0 : 10.0.0.1:49152: Found upnp service at: /upnp/control/WANIPConnection0
+Open.NAT Information: 0 : 10.0.0.1:49152: Handshake Complete
+Open.NAT Information: 0 : Stop Discovery
+Open.NAT Information: 0 : CreatePortMapAsync - Creating port mapping Tcp 27317 --> 10.0.0.111:27317 (Datastrike Host)
+Open.NAT Information: 0 : GetAllMappingsAsync - Getting all mappings
+Open.NAT Warning: 0 : Server failed with error: 713 - SpecifiedArrayIndexInvalid
+Open.NAT Warning: 0 : Router failed with 713-SpecifiedArrayIndexInvalid. No more mappings is assumed.

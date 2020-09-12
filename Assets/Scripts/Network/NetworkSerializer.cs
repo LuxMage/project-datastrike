@@ -54,13 +54,12 @@ namespace DatastrikeNetwork
             NetworkCommunicator.UpdateSendMessage(message);
         }
 
-        // Takes the full data sent from the other client and distributes them to each corresponding network identity
+        // Takes the data sent from the other client and distributes them to each corresponding network identity
         public static void DistributeMessages(byte[] sendData)
         {
-            int i = 2;
-            ushort sendDataLength = BitConverter.ToUInt16(sendData, 0);
+            int i = 12;
             int increment = 0;
-            while (i < sendDataLength - 3)
+            while (i < sendData.Length)
             {
                 NetworkEvent currentEvent = DisassembleMessage(sendData, i, out increment);
                 currentEvent.GetNetworkIdentity().dataQueue.Add(currentEvent);

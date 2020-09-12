@@ -34,7 +34,7 @@ public class RoleDistributor : MonoBehaviour
         startCamera.SetActive(false);
         agent.transform.GetChild(0).gameObject.SetActive(true);
 
-        Thread server = new Thread(new ThreadStart(NetworkCommunicator.RunServer));
+        Thread server = new Thread(new ThreadStart(NetworkCommunicator.RunHost));
         server.Start();
     }
 
